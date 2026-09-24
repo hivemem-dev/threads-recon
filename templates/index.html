@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>threads-recon</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #1a1d24; --border: #2a2e37; --text: #e8e8ea; --muted: #8a8f9a; --accent: #6c8cff;
+    --danger: #f56565; --good: #48bb78;
+  }
+  html[data-theme="light"] { --bg: #f5f6f8; --card: #ffffff; --border: #dde1e8; --text: #1a1d24; --muted: #6b7280; --accent: #4a6cf7; --danger: #dc2626; --good: #16a34a; }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 16px; max-width: 780px; margin: 0 auto; }
+  header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  a.gh { color: var(--muted); text-decoration: none; font-size: 14px; }
+  .theme-btn { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 14px; }
+  h1 { font-size: 18px; margin: 0 0 6px; }
+  .sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+  .add-form { background: var(--card); border: 1px dashed var(--border); border-radius: 12px; padding: 14px; margin-bottom: 18px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .add-form input { flex: 1; min-width: 120px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; font-size: 14px; font-family: inherit; }
+  .add-form button { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .limit-hint { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .comp-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .comp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .comp-name { font-size: 16px; font-weight: 600; }
+  .comp-niche { font-size: 11px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; margin-left: 8px; }
+  .comp-actions { display: flex; gap: 6px; }
+  .comp-actions button { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .comp-actions button.danger { color: var(--danger); border-color: var(--danger); }
+  .comp-stats { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin: 8px 0 12px; }
+  .comp-stats b { color: var(--text); }
+  .ptable { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-height: 320px; overflow-y: auto; }
+  .prow { display: grid; grid-template-columns: 78px 1fr 55px 55px; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--border); font-size: 12px; align-items: center; }
+  .prow:first-child { border-top: none; }
+  .prow:nth-child(odd) { background: color-mix(in srgb, var(--bg) 60%, transparent); }
+  .pdate { color: var(--muted); }
+  .ptext a { color: var(--text); text-decoration: none; }
+  .ptext a:hover { text-decoration: underline; }
+  .pnum { text-align: right; font-variant-numeric: tabular-nums; }
+  .empty-hint { color: var(--muted); font-size: 13px; padding: 24px; text-align: center; }
+  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 10px 0 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <a class="gh" href="https://github.com/hivemem-dev/threads-recon" target="_blank">threads-recon на GitHub ↗</a>
+  <button class="theme-btn" onclick="toggleTheme()">☀️/🌙</button>
+</header>
+<h1>Разведка конкурентов в Threads</h1>
+<div class="sub">
+  Честные ограничения: у чужих постов видно текст, дату, лайки, просмотры и ссылку — а вот реплаи/репосты/цитаты Threads анонимно не отдаёт.
+  Подписчики — текущее число, история строится сама с момента добавления, задним числом её не взять.
+</div>
+
+<form class="add-form" method="POST" action="/add">
+  <input type="text" name="username" placeholder="username (без @)" required>
+  <input type="text" name="niche" placeholder="ниша (например: маркетинг)">
+  <button type="submit">+ Добавить в разведку</button>
+</form>
+<div class="limit-hint">{{ competitors|length }} / {{ max_competitors }} слотов занято</div>
+
+{% if not competitors %}
+  <div class="empty-hint">Пока никого не отслеживаешь. Добавь конкурента выше — сразу подтянутся последние посты и подписчики.</div>
+{% endif %}
+
+{% for c in competitors %}
+  {% set row = c.row %}
+  <div class="comp-card">
+    <div class="comp-head">
+      <div><span class="comp-name">@{{ row['username'] }}</span>{% if row['niche'] %}<span class="comp-niche">{{ row['niche'] }}</span>{% endif %}</div>
+      <div class="comp-actions">
+        <form method="POST" action="/{{ row['id'] }}/refresh" style="display:inline;"><button type="submit">🔄 Обновить</button></form>
+        <form method="POST" action="/{{ row['id'] }}/delete" onsubmit="return confirm('Перестать отслеживать @{{ row['username'] }}? История удалится.');" style="display:inline;"><button type="submit" class="danger">✕</button></form>
+      </div>
+    </div>
+    <div class="comp-stats">
+      <span>Подписчиков: <b>{{ c.followers if c.followers is not none else '—' }}</b></span>
+      <span>Постов в базе: <b>{{ c.posts|length }}</b></span>
+      <span>Снимков подписчиков: <b>{{ c.snapshots }}</b></span>
+    </div>
+    {% if c.posts %}
+    {% set top5 = c.posts|sort(attribute='likes', reverse=True) %}
+    <div class="section-label">🏆 Топ-5 по лайкам</div>
+    <div class="ptable" style="margin-bottom:12px;">
+      {% for p in top5[:5] %}
+      <div class="prow">
+        <div class="pdate">{{ p['timestamp'][:10] if p['timestamp'] else '' }}</div>
+        <div class="ptext"><a href="{{ p['permalink'] }}" target="_blank">{{ (p['text'][:80] if p['text'] else '') or '(без текста)' }}</a></div>
+        <div class="pnum">👍 {{ p['likes'] }}</div>
+        <div class="pnum">👁 {{ p['views'] if p['views'] is not none else '—' }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="section-label">Все посты (по дате)</div>
+    <div class="ptable">
+      {% for p in c.posts %}
+      <div class="prow">
+        <div class="pdate">{{ p['timestamp'][:10] if p['timestamp'] else '' }}</div>
+        <div class="ptext"><a href="{{ p['permalink'] }}" target="_blank">{{ (p['text'][:80] if p['text'] else '') or '(без текста)' }}</a></div>
+        <div class="pnum">👍 {{ p['likes'] }}</div>
+        <div class="pnum">👁 {{ p['views'] if p['views'] is not none else '—' }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <div class="empty-hint">Постов пока нет</div>
+    {% endif %}
+  </div>
+{% endfor %}
+
+<script>
+  function applyTheme(t) { document.documentElement.dataset.theme = t; localStorage.setItem('theme', t); }
+  function toggleTheme() { applyTheme((document.documentElement.dataset.theme || 'dark') === 'dark' ? 'light' : 'dark'); }
+  applyTheme(localStorage.getItem('theme') || 'dark');
+</script>
+</body>
+</html>

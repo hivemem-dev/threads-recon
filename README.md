@@ -77,10 +77,26 @@ Output is JSON on stdout, e.g.:
 Pipe it anywhere: `> data.json`, `| jq`, a Python script that inserts into a
 database, whatever you're building.
 
+## Web UI
+
+There's also a small local web app (`webapp.py`) that does the "store
+snapshots over time" and "track multiple competitors" part for you — add
+accounts through a form, see followers/posts/top-5-by-likes in a browser,
+data persists in a local `recon.db` (SQLite, created automatically).
+
+```bash
+pip install -r requirements.txt
+python3 webapp.py
+```
+
+Open `http://127.0.0.1:5050`. Runs entirely on your machine, nothing is sent
+anywhere else.
+
 ## Turning this into your own analytics service
 
-This repo is deliberately just the data-fetching core, not a full app — bolt
-on what you actually need:
+The `recon.py`/`fetch_profile.js` pair is deliberately just the data-fetching
+core; `webapp.py` is one opinionated way to wrap it. Bolt on whatever you
+actually need instead:
 
 1. **Store snapshots over time.** Followers alone are a single number; the
    useful signal is the *trend*. Run `recon.py` on a schedule (cron, a
@@ -169,10 +185,26 @@ python3 recon.py <username> --views   # + просмотры под каждым
 Результат — JSON в stdout, дальше сохраняй куда угодно: в файл, в таблицу,
 в свою базу.
 
+### Веб-интерфейс
+
+Есть ещё небольшое локальное веб-приложение (`webapp.py`) — оно уже само
+делает "храни снимки со временем" и "следи за несколькими конкурентами":
+добавляешь аккаунты через форму в браузере, видишь подписчиков/посты/топ-5
+по лайкам, всё сохраняется в локальный `recon.db` (SQLite, создаётся сам).
+
+```bash
+pip install -r requirements.txt
+python3 webapp.py
+```
+
+Открой `http://127.0.0.1:5050`. Работает полностью на твоей машине, никуда
+ничего не уходит.
+
 ### Как собрать из этого свой сервис аналитики
 
-Этот репозиторий — сознательно только ядро получения данных, не готовое
-приложение. Дособери то, что реально нужно:
+Связка `recon.py`/`fetch_profile.js` — сознательно только ядро получения
+данных, `webapp.py` — один из вариантов, как его обернуть. Дособери своё,
+если нужно другое:
 
 1. **Сохраняй снимки со временем.** Число подписчиков само по себе — просто
    цифра, полезен только тренд. Запускай `recon.py` по расписанию (cron,
