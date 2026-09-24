@@ -58,7 +58,7 @@ npm install        # pulls in threads-api
 ```bash
 python3 recon.py <username>           # followers + latest posts
 python3 recon.py <username> --posts   # posts only, skip the follower lookup
-python3 recon.py <username> --views   # also fetch view counts per post (slower, one request each)
+python3 recon.py <username> --views   # also fetch view counts per post (slower, one request each). Be polite, add a short delay between calls if you loop over many posts or accounts
 ```
 
 Output is JSON on stdout, e.g.:
@@ -88,9 +88,8 @@ on what you actually need:
    `followers` value with a timestamp to a table (SQLite is plenty).
 2. **Track multiple competitors.** Keep a simple list of usernames per
    niche, loop over it, be polite about it — add a short `sleep()` between
-   accounts and between the per-post `--views` calls, this repo does 0.3s
-   between post-view lookups by default in the dashboard version; do
-   something similar in your own loop.
+   accounts and between the per-post `--views` calls, a few hundred
+   milliseconds is enough.
 3. **Score posts.** Once you're storing `likes`/`views` per post over time,
    it's trivial to rank "what's actually working" for a niche: sort by
    views-per-follower or likes-per-view instead of raw counts, so a small
@@ -181,8 +180,8 @@ python3 recon.py <username> --views   # + просмотры под каждым
    результат `followers` с меткой времени в таблицу (хватит и SQLite).
 2. **Следи за несколькими конкурентами.** Держи простой список username по
    нише, перебирай их циклом, но вежливо — ставь паузу между аккаунтами и
-   между запросами `--views` на каждый пост (в версии для дашборда пауза
-   0.3 секунды между постами, сделай похожую у себя).
+   между запросами `--views` на каждый пост, пары сотен миллисекунд
+   достаточно.
 3. **Считай рейтинг постов.** Когда лайки/просмотры по постам копятся со
    временем, легко посчитать, что реально работает в нише: сортируй не по
    сырым цифрам, а по просмотрам на подписчика или лайкам на просмотр —
